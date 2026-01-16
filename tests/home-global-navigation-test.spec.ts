@@ -1,9 +1,17 @@
 import { test, expect, chromium, Browser, Page, BrowserContext } from "@playwright/test";
 import HeaderFooterPage from '../pages/HeaderFooterPage';
+
 import { LinkKey } from "../pages/HeaderFooterPage";
+import { SITE } from "../utils/test-data/site";
+import { CART } from "../utils/test-data/cart";
+
+// Local URL helpers for this spec (Stage 1: keep data in test-data, no shared helpers yet).
+const BASE_URL = SITE.baseUrl.replace(/\/$/, '');
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const HOME_URL_REGEX = new RegExp(`^${escapeRegExp(BASE_URL)}\\/?$`, 'i')
 
 const cases: Array<[string, RegExp]> = [
-    ['STORE', /atid\.store\/store/i],
+    ['STORE', /\/store\/?$/i],
     ['MEN', /product-category\/men/i],
     ['WOMEN', /product-category\/women/i],
     ['ACCESSORIES', /product-category\/accessories/i],
@@ -12,7 +20,7 @@ const cases: Array<[string, RegExp]> = [
 ];
 
 const quickLinks: ReadonlyArray<readonly [LinkKey, RegExp]> = [
-    ['CART', /atid\.store\/cart/i],
+    ['CART', /\/cart(-\d+)?\/?$/i],
     ['CONTACT US', /contact-us/i],
     ['ABOUT', /about/i],
 ] as const;
@@ -27,7 +35,7 @@ test.describe('home and global navigations tests', () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
     });
 
@@ -42,7 +50,7 @@ test.describe('home and global navigations tests', () => {
             await headerFooterPage.navigateToTab(tab);
             await expect(page).toHaveURL(expectedUrl);
             await headerFooterPage.backToHomeTab();
-            await expect(page).toHaveURL("https://atid.store/");
+            await expect(page).toHaveURL(SITE.baseUrl);
 
         }
     })
@@ -50,9 +58,9 @@ test.describe('home and global navigations tests', () => {
     test('TC-002 Cart badge shows 0 on clean session', async () => {
         for (const [tab] of cases) {
             await headerFooterPage.navigateToTab(tab);
-            await headerFooterPage.verifyQuantityItemsInCart("0");
+            await headerFooterPage.verifyQuantityItemsInCart(CART.empty.badgeCount);
             await page.reload();
-            await headerFooterPage.verifyQuantityItemsInCart("0")
+            await headerFooterPage.verifyQuantityItemsInCart(CART.empty.badgeCount);
         }
 
     })
@@ -96,9 +104,9 @@ test.describe('home and global navigations tests', () => {
         for (const [tab, expectedUrl] of cases) {
             await headerFooterPage.navigateToTab(tab);
             await expect(page).toHaveURL(expectedUrl);
-            await expect(page).not.toHaveURL(/atid\.store\/?$/i);
+            await expect(page).not.toHaveURL(HOME_URL_REGEX);
             await headerFooterPage.backToHomeTab();
-            await expect(page).toHaveURL("https://atid.store/");
+            await expect(page).toHaveURL(SITE.baseUrl);
         }
 
     });
@@ -107,7 +115,7 @@ test.describe('home and global navigations tests', () => {
     test('TC-007 Header amount is visible', async () => {
         for (const [tab] of cases) {
             await headerFooterPage.navigateToTab(tab);
-            await headerFooterPage.verifyTotalItemsInCart("0.00");
+            await headerFooterPage.verifyTotalItemsInCart(CART.empty.headerAmount);
         }
 
 

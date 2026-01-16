@@ -2,20 +2,16 @@ import { test, expect, chromium, Browser, Page, BrowserContext } from "@playwrig
 import HeaderFooterPage from "../pages/HeaderFooterPage";
 import CategoryPage from "../pages/CategoryPage";
 import ProductDetailsPage from "../pages/ProductDetailsPage";
-const categoryList = ['Accessories', 'Men', 'Women'];
-const itemsList = [
-    'Boho Bangle Bracelet',
-    'Bright Gold Purse With Chain',
-    'Buddha Bracelet',
-    'Flamingo Tshirt',
-    'Blue Hoodie',
-]
+
+import { NAV } from "../utils/test-data/navigation";
+import { SITE } from "../utils/test-data/site";
+import { CATALOG } from "../utils/test-data/catalog";
+import { PRODUCTS } from "../utils/test-data/products";
 
 type Case = {
     tab: string;
     url: RegExp;
     pageType: "category" | "about" | "contact";
-    // heading?: string;
     breadcrumb?: string;
 };
 
@@ -41,7 +37,7 @@ test.describe('Catalog Sidebar Component Reuse and Behavior Across Catalog Pages
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
         categoryPage = new CategoryPage(page);
         productDetailsPage = new ProductDetailsPage(page);
@@ -53,7 +49,8 @@ test.describe('Catalog Sidebar Component Reuse and Behavior Across Catalog Pages
     })
 
     test('TC-063 Sidebar is present only on catalog pages ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+
         for (const c of cases) {
             await headerFooterPage.navigateToTab(c.tab);
             await expect(page).toHaveURL(c.url);
@@ -63,33 +60,54 @@ test.describe('Catalog Sidebar Component Reuse and Behavior Across Catalog Pages
             }
 
             await categoryPage.verifySlideFilterByPriceVisibleAndEnable();
-            await categoryPage.verifyCategoriesVisible(categoryList);
-            await categoryPage.verifyBestSellersItemsVisible(itemsList);
-
+            await categoryPage.verifyCategoriesVisible([
+                CATALOG.categories.accessories,
+                CATALOG.categories.men,
+                CATALOG.categories.women
+            ]);
+            await categoryPage.verifyBestSellersItemsVisible([...CATALOG.bestSellersItems]);
         }
     })
 
     test('TC-064 Price filter resets when selecting category from sidebar', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifyProductsPricesInRange(30, 250);
-        await categoryPage.applyPriceRangeFilter(0, -130);
-        await categoryPage.verifySlidePriceFilterMinPrice("30");;
-        await categoryPage.verifySlidePriceFilterMaxPrice("120");
-        await categoryPage.verifyPriceParamsInUrl(30, 120)
-        await categoryPage.verifyProductsPricesInRange(30, 120);
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.verifyProductsPricesInRange(
+            CATALOG.priceFilter.defaultRange.min,
+            CATALOG.priceFilter.defaultRange.max
+        );
+        await categoryPage.applyPriceRangeFilter(
+            CATALOG.priceFilter.narrowedRange.sliderDrag.minOffset,
+            CATALOG.priceFilter.narrowedRange.sliderDrag.maxOffset
+        );
+        await categoryPage.verifySlidePriceFilterMinPrice(CATALOG.priceFilter.narrowedRange.expectedMinText);
+        await categoryPage.verifySlidePriceFilterMaxPrice(CATALOG.priceFilter.narrowedRange.expectedMaxText);
+        await categoryPage.verifyPriceParamsInUrl(
+            CATALOG.priceFilter.narrowedRange.min,
+            CATALOG.priceFilter.narrowedRange.max
+        );
+        await categoryPage.verifyProductsPricesInRange(
+            CATALOG.priceFilter.narrowedRange.min,
+            CATALOG.priceFilter.narrowedRange.max);
         await categoryPage.selectCategoryByName("Men");
-        await categoryPage.verifySlidePriceFilterMinPrice("80");
-        await categoryPage.verifySlidePriceFilterMaxPrice("190");
+        await categoryPage.selectCategoryByName(CATALOG.categories.men);
+        await categoryPage.verifySlidePriceFilterMinPrice(CATALOG.priceFilter.afterSelectMenReset.expectedMinText);
+        await categoryPage.verifySlidePriceFilterMaxPrice(CATALOG.priceFilter.afterSelectMenReset.expectedMaxText);
         await categoryPage.verifyNotPriceParamsInUrl();
-        await categoryPage.verifyAtLeastOneProductPriceOutOfRange(30, 120);
+        await categoryPage.verifyAtLeastOneProductPriceOutOfRange(
+            CATALOG.priceFilter.narrowedRange.min,
+            CATALOG.priceFilter.narrowedRange.max
+        );
     });
 
     test('TC-065 Negative Best Sellers opens correct PDP context', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectBestSellerByName("Blue Hoodie");
-        await productDetailsPage.verifyProductDetailsInfo("Blue Hoodie", 150);
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifyBestSellersItemsVisible(itemsList);
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectBestSellerByName(PRODUCTS.blueHoodie.name);
+        await productDetailsPage.verifyProductDetailsInfo(
+            PRODUCTS.blueHoodie.name,
+            PRODUCTS.blueHoodie.price
+        );
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.verifyBestSellersItemsVisible([...CATALOG.bestSellersItems]);
     })
 
 

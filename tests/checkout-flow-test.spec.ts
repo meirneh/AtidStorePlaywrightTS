@@ -5,6 +5,12 @@ import ProductDetailsPage from "../pages/ProductDetailsPage";
 import CartPage from "../pages/CartPage";
 import CheckoutPage from "../pages/CheckoutPage";
 
+import { SITE } from "../utils/test-data/site";
+import { NAV } from "../utils/test-data/navigation";
+import { PRODUCTS } from "../utils/test-data/products";
+import { CART } from "../utils/test-data/cart";
+import { BILLING_ISRAEL, CHECKOUT } from "../utils/test-data/checkout";
+
 
 let browser: Browser;
 let context: BrowserContext;
@@ -15,26 +21,13 @@ let productDetailsPage: ProductDetailsPage;
 let cartPage: CartPage;
 let checkoutPage: CheckoutPage;
 
-const billingInfoIsrael = {
-    firstName: "Haim",
-    lastName: "Cohen",
-    company: "Cohen LTD.",     // optional
-    country: "Israel",
-    address: "Ha Jasmin 8",
-    appartment: "floor 1",     // optional
-    postcode: "1234567",
-    city: "Tel Aviv",
-    phone: "050-1234567",
-    email: "cohen@gmail.com",
-}
-
-test.describe('Checkout Flow – Shipping, Payment and Order Review', () => {
+test.describe('Checkout Flow Shipping, Payment and Order Review', () => {
 
     test.beforeEach(async () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
         categoryPage = new CategoryPage(page);
         productDetailsPage = new ProductDetailsPage(page);
@@ -49,23 +42,24 @@ test.describe('Checkout Flow – Shipping, Payment and Order Review', () => {
     })
 
     test('TC-032 Guest checkout is accessible and cart is preserved', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectProductByName("ATID Green Shoes");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
         await productDetailsPage.addToCart();
         await productDetailsPage.viewCart();
-        await cartPage.verifyCartLines([{ term: "ATID Green Shoes", expectedPrice: 110.00, expectedQty: 1, expectedSubtotal: 110.00 }]);
+        await cartPage.verifyCartLines([...CART.lines.greenQtyOne]);
         await cartPage.goToCheckout();
         await checkoutPage.verifyOrderDetails(
-            [{ term: "ATID Green Shoes", expectedQty: 1 }],
-            [{ term: "ATID Green Shoes", expectedTotal: 110.00 }],
-            110.00, // expectedSubTotal
-            110.00  // expectedOrderTotal
+            [{ term: PRODUCTS.atidGreenShoes.name, expectedQty: CHECKOUT.orderExpectations.greenShoes.qty }],
+            [{ term: PRODUCTS.atidGreenShoes.name, expectedTotal: CHECKOUT.orderExpectations.greenShoes.lineTotal }],
+            CHECKOUT.orderExpectations.greenShoes.subTotal,
+            CHECKOUT.orderExpectations.greenShoes.orderTotal
         );
+
     })
 
     test('TC-033 Shipping address requires mandatory fields', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectProductByName("ATID Green Shoes");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
         await productDetailsPage.addToCart();
         await productDetailsPage.viewCart();
         await cartPage.goToCheckout();
@@ -74,37 +68,29 @@ test.describe('Checkout Flow – Shipping, Payment and Order Review', () => {
     })
 
     test('TC-034 Shipping method selection updates totals', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectProductByName("ATID Green Shoes");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
         await productDetailsPage.addToCart();
         await productDetailsPage.viewCart();
         await cartPage.goToCheckout();
-        await checkoutPage.selectShippingOption('deliveryExpress');
-        await checkoutPage.verifyTotalsAfterShippingChange(12.50);
-        await checkoutPage.selectShippingOption('registeredMail');
+        await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.deliveryExpress);
+        await checkoutPage.verifyTotalsAfterShippingChange(CHECKOUT.shippingCosts.deliveryExpress);
+        await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.registeredMail);
         await checkoutPage.verifyRegisteredMailSelected();
-        await checkoutPage.verifyTotalsAfterShippingChange(5.90);
-        await checkoutPage.selectShippingOption('localPickup');
-        await checkoutPage.verifyTotalsAfterShippingChange(0);
+        await checkoutPage.verifyTotalsAfterShippingChange(CHECKOUT.shippingCosts.registeredMail);
+        await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.localPickup);
+        await checkoutPage.verifyTotalsAfterShippingChange(CHECKOUT.shippingCosts.localPickup);
     })
 
     test('TC-035 Payment step accepts valid path', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectProductByName("ATID Green Shoes");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
         await productDetailsPage.addToCart();
         await productDetailsPage.viewCart();
         await cartPage.goToCheckout();
-        await checkoutPage.selectShippingOption('deliveryExpress');
-        await checkoutPage.fillBillInfo(billingInfoIsrael)
+        await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.deliveryExpress);
+        await checkoutPage.fillBillInfo(BILLING_ISRAEL)
         await checkoutPage.placeOrder();
         await checkoutPage.verifyInvalidPaymentMessage();
     })
-
-
-
-
-
-
-
-
 })

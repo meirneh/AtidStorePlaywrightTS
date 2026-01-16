@@ -3,6 +3,9 @@ import HeaderFooterPage from "../pages/HeaderFooterPage";
 import AboutPage from "../pages/AboutPage";
 import ContactUsPage from '../pages/ContacUsPage';
 
+import { SITE } from "../utils/test-data/site";
+import { STATIC_PAGES } from "../utils/test-data/static-pages";
+
 let browser: Browser;
 let context: BrowserContext;
 let page: Page;
@@ -24,12 +27,12 @@ const verifications = [
 ];
 
 
-test.describe('About / Contact / Static Pages Footer Navigation and Contact Form', () => {
+test.describe('Static pages: About & Contact (footer + contact form)', () => {
     test.beforeEach(async () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
         aboutPage = new AboutPage(page);
         contactUsPage = new ContactUsPage(page);
@@ -41,15 +44,15 @@ test.describe('About / Contact / Static Pages Footer Navigation and Contact Form
     })
 
     test('TC-049 About page opens from footer', async () => {
-        await headerFooterPage.navigateToQuickLink("ABOUT");
-        await headerFooterPage.verifyQuickLinkUrl("ABOUT");
-        await aboutPage.verifyAboutPageUrl("https://atid.store/about/");
+        await headerFooterPage.navigateToQuickLink(STATIC_PAGES.quickLinks.about);
+        await headerFooterPage.verifyQuickLinkUrl(STATIC_PAGES.quickLinks.about);
+        await aboutPage.verifyAboutPageUrl(STATIC_PAGES.urls.about);
         await aboutPage.verifyAboutUsTextTitle();
     })
 
     test('TC-050 Contact page opens from footer', async () => {
-        await headerFooterPage.navigateToQuickLink("CONTACT US");
-        await headerFooterPage.verifyQuickLinkUrl("CONTACT US");
+        await headerFooterPage.navigateToQuickLink(STATIC_PAGES.quickLinks.contactUs);
+        await headerFooterPage.verifyQuickLinkUrl(STATIC_PAGES.quickLinks.contactUs);
         await contactUsPage.verifyContactUsTextTitle();
         for (const check of checks) {
             await check();
@@ -58,7 +61,7 @@ test.describe('About / Contact / Static Pages Footer Navigation and Contact Form
     })
 
     test('TC-051 Negative: Contact submit with empty required fields', async () => {
-        await headerFooterPage.navigateToQuickLink("CONTACT US");
+        await headerFooterPage.navigateToQuickLink(STATIC_PAGES.quickLinks.contactUs);
         await contactUsPage.clickSendMessageButton();
         for (const verification of verifications) {
             await verification();
@@ -66,10 +69,15 @@ test.describe('About / Contact / Static Pages Footer Navigation and Contact Form
     })
 
     test('TC-052 Contact form successful submit', async () => {
-         await headerFooterPage.navigateToQuickLink("CONTACT US");
-         await contactUsPage.sendMessage("Haim","Test subject","haim@gmail.com","test message");
-         await contactUsPage.verifyConfirmationMessage();
-        
+        await headerFooterPage.navigateToQuickLink(STATIC_PAGES.quickLinks.contactUs);;
+        await contactUsPage.sendMessage(
+            STATIC_PAGES.contactForm.valid.name,
+            STATIC_PAGES.contactForm.valid.subject,
+            STATIC_PAGES.contactForm.valid.email,
+            STATIC_PAGES.contactForm.valid.message
+        );
+        await contactUsPage.verifyConfirmationMessage();
+
     })
-    
+
 })

@@ -3,6 +3,10 @@ import HeaderFooterPage from "../pages/HeaderFooterPage";
 import SearchResultPage from "../pages/SearchResultPage";
 import CategoryPage from "../pages/CategoryPage";
 
+import { SITE } from "../utils/test-data/site";
+import { NAV } from "../utils/test-data/navigation";
+import { SEARCH } from "../utils/test-data/search";
+
 let browser: Browser;
 let context: BrowserContext;
 let page: Page;
@@ -15,7 +19,7 @@ test.describe('Header Search Functionality Verification', () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
         searchResultPage = new SearchResultPage(page);
         categoryPage = new CategoryPage(page);
@@ -35,34 +39,33 @@ test.describe('Header Search Functionality Verification', () => {
     })
 
     test('TC-014 Sidebar search filters within catalog context ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifyCountProducts(12);
-        await categoryPage.searchValue("Shirt");
-        await categoryPage.verifyCountProducts(7);
-        await categoryPage.verifyProductContain("Shirt");
-        await headerFooterPage.navigateToTab("HOME");
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifyCountProducts(12);
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.verifyCountProducts(SEARCH.sidebarCatalog.initialProductsCount);
+        await categoryPage.searchValue(SEARCH.sidebarCatalog.term);
+        await categoryPage.verifyCountProducts(SEARCH.sidebarCatalog.filteredProductsCount);
+        await categoryPage.searchValue(SEARCH.sidebarCatalog.term);
+        await headerFooterPage.navigateToTab(NAV.tabs.home);
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
     })
 
     test('TC-015 Negative empty header search does not trigger navigation ', async () => {
-        await headerFooterPage.searchValue("");
+        await headerFooterPage.searchValue(SEARCH.negative.empty);
         await headerFooterPage.verifySearchBarIsNotVisibleAndDisable();
-        await headerFooterPage.verifyHomePageUrl("https://atid.store/");
+        await headerFooterPage.verifyHomePageUrl(SITE.baseUrl);
     })
 
     test('TC-016 Negative no match message displayed and retry search works ', async () => {
-        await headerFooterPage.searchValue("pizza");
-        await searchResultPage.verifyResultsTitleText("pizza");
+        await headerFooterPage.searchValue(SEARCH.negative.noMatch);
+        await searchResultPage.verifyResultsTitleText(SEARCH.negative.noMatch);
         await searchResultPage.verifyErrorMessage();
-        await searchResultPage.searchValue("shirt");
-        await searchResultPage.verifyResultsTitleText("shirt");
-        await searchResultPage.verifyCountResults(8);
+        await searchResultPage.searchValue(SEARCH.header.term);
+        await searchResultPage.verifyResultsTitleText(SEARCH.header.term);
+        await searchResultPage.verifyCountResults(SEARCH.header.expectedResultsCount);
     })
 
     test('TC-017 Search term echo is visible ', async () => {
-        await headerFooterPage.searchValue("men");
-        await searchResultPage.verifyResultsTitleText("men");
+        await headerFooterPage.searchValue(SEARCH.echo.term);
+        await searchResultPage.verifyResultsTitleText(SEARCH.echo.term);
     })
 
 

@@ -3,14 +3,17 @@ import HeaderFooterPage from "../pages/HeaderFooterPage";
 import CategoryPage from "../pages/CategoryPage";
 import ProductDetailsPage from "../pages/ProductDetailsPage";
 
-const categoryList = ['Accessories', 'Men', 'Women'];
-const itemsList = [
-    'Boho Bangle Bracelet',
-    'Bright Gold Purse With Chain',
-    'Buddha Bracelet',
-    'Flamingo Tshirt',
-    'Blue Hoodie',
-]
+import { SITE } from "../utils/test-data/site";
+import { NAV } from "../utils/test-data/navigation";
+import { CATALOG } from "../utils/test-data/catalog"
+
+const categoryList = [
+    CATALOG.categories.accessories,
+    CATALOG.categories.men,
+    CATALOG.categories.women
+];
+
+const itemsList = CATALOG.bestSellersItems;
 
 let browser: Browser;
 let context: BrowserContext;
@@ -24,7 +27,7 @@ test.describe('categories borwsing tests suite', () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
         page = await context.newPage();
-        await page.goto("https://atid.store/");
+        await page.goto(SITE.baseUrl);
         headerFooterPage = new HeaderFooterPage(page);
         categoryPage = new CategoryPage(page);
         productDetailsPage = new ProductDetailsPage(page);
@@ -36,39 +39,56 @@ test.describe('categories borwsing tests suite', () => {
     })
 
     test('TC-008 Category pages display sidebar widgets ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
         await categoryPage.verifySearchProductsVisibleAndEnable();
         await categoryPage.verifySearchProductsVisibleAndEnable();
         await categoryPage.verifySlidePriceFilterProductsVisible();
         await categoryPage.verifyCategoriesVisible(categoryList);
-        await categoryPage.verifyBestSellersItemsVisible(itemsList);
+        await categoryPage.verifyBestSellersItemsVisible([...itemsList]);
+
 
     })
 
     test('TC-009 Filter by price narrows the list ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifyProductsPricesInRange(30, 250);
-        await categoryPage.applyPriceRangeFilter(0, -130);
-        await categoryPage.verifySlidePriceFilterMinPrice("30");;
-        await categoryPage.verifySlidePriceFilterMaxPrice("120");
-        await categoryPage.verifyPriceParamsInUrl(30, 120)
-        await categoryPage.verifyProductsPricesInRange(30, 120);
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.verifySlidePriceFilterMinPrice("30");
-        await categoryPage.verifySlidePriceFilterMaxPrice("250");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.verifyProductsPricesInRange(
+            CATALOG.priceFilter.defaultRange.min,
+            CATALOG.priceFilter.defaultRange.max
+        );
+        await categoryPage.applyPriceRangeFilter(
+            CATALOG.priceFilter.narrowedRange.sliderDrag.minOffset,
+            CATALOG.priceFilter.narrowedRange.sliderDrag.maxOffset
+        );
+        await categoryPage.verifySlidePriceFilterMinPrice(CATALOG.priceFilter.narrowedRange.expectedMinText);
+        await categoryPage.verifySlidePriceFilterMaxPrice(CATALOG.priceFilter.narrowedRange.expectedMaxText);
+        await categoryPage.verifyPriceParamsInUrl(
+            CATALOG.priceFilter.narrowedRange.min,
+            CATALOG.priceFilter.narrowedRange.max
+        );
+        await categoryPage.verifyProductsPricesInRange(
+            CATALOG.priceFilter.narrowedRange.min,
+            CATALOG.priceFilter.narrowedRange.max
+        );
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.verifySlidePriceFilterMinPrice(CATALOG.priceFilter.narrowedRange.expectedMinText);
+        await categoryPage.verifySlidePriceFilterMaxPrice(String(CATALOG.priceFilter.defaultRange.max));
         await categoryPage.verifyNotPriceParamsInUrl();
-        await categoryPage.verifyProductsPricesInRange(30, 250);
+        await categoryPage.verifyProductsPricesInRange(
+            CATALOG.priceFilter.defaultRange.min,
+            CATALOG.priceFilter.defaultRange.max
+
+        );
     })
 
     test('TC-010 Category link filters listing ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
-        await categoryPage.selectCategoryAndVerifyProducts("Accessories");
-        await categoryPage.selectCategoryAndVerifyProducts("Men");
-        // await categoryPage.selectCategoryAndVerifyProducts("Women");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.accessories);
+        await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.men);
+        // await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.women);
     })
 
     test('TC-011 Best Sellers link opens Product Ddetais Page ', async () => {
-        await headerFooterPage.navigateToTab("STORE");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
         for (const producName of itemsList) {
             await categoryPage.selectBestSellerByName(producName);
             await productDetailsPage.verifyProductTitleText(producName);
@@ -78,19 +98,11 @@ test.describe('categories borwsing tests suite', () => {
     })
 
     test('TC-012 Category counters reflect displayed quantities', async () => {
-        await headerFooterPage.navigateToTab("STORE");
+        await headerFooterPage.navigateToTab(NAV.tabs.store);
         for (const category of categoryList) {
             await categoryPage.selectCategoryByName(category);
             await categoryPage.verifyCategoryCountMatchesResults(category)
         }
     })
-
-
-
-
-
-
-
-
 
 })
