@@ -10,6 +10,10 @@ import { NAV } from "../utils/test-data/navigation";
 import { PRODUCTS } from "../utils/test-data/products";
 import { CART } from "../utils/test-data/cart";
 import { BILLING_ISRAEL, CHECKOUT } from "../utils/test-data/checkout";
+import { goToStore } from "../utils/helpers/navigation";
+import { openCartFromPdp } from "../utils/helpers/pdp";
+import { addProductToCartFromStore } from "../utils/helpers/cart-actions";
+import { openProductFromStore } from "../utils/helpers/store";
 
 
 let browser: Browser;
@@ -22,6 +26,19 @@ let cartPage: CartPage;
 let checkoutPage: CheckoutPage;
 
 test.describe('Checkout Flow Shipping, Payment and Order Review', () => {
+    const goToStoreTab = async () => {
+        await goToStore(headerFooterPage, NAV.tabs.store);
+    };
+
+    const openProduct = async (productName: string) => {
+        await openProductFromStore(goToStoreTab, categoryPage, productName);
+    };
+
+    const goToCheckoutWithSingleProduct = async (productName: string) => {
+        await addProductToCartFromStore(openProduct, productDetailsPage, productName);
+        await openCartFromPdp(productDetailsPage);
+        await cartPage.goToCheckout();
+    };
 
     test.beforeEach(async () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
@@ -42,10 +59,8 @@ test.describe('Checkout Flow Shipping, Payment and Order Review', () => {
     })
 
     test('TC-032 Guest checkout is accessible and cart is preserved', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
+        await addProductToCartFromStore(openProduct, productDetailsPage, PRODUCTS.atidGreenShoes.name);
+        await openCartFromPdp(productDetailsPage);
         await cartPage.verifyCartLines([...CART.lines.greenQtyOne]);
         await cartPage.goToCheckout();
         await checkoutPage.verifyOrderDetails(
@@ -54,25 +69,16 @@ test.describe('Checkout Flow Shipping, Payment and Order Review', () => {
             CHECKOUT.orderExpectations.greenShoes.subTotal,
             CHECKOUT.orderExpectations.greenShoes.orderTotal
         );
-
     })
 
     test('TC-033 Shipping address requires mandatory fields', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
-        await cartPage.goToCheckout();
+        await goToCheckoutWithSingleProduct(PRODUCTS.atidGreenShoes.name);
         await checkoutPage.placeOrder();
         await checkoutPage.verifyErrorsMessagesTexts();
     })
 
     test('TC-034 Shipping method selection updates totals', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
-        await cartPage.goToCheckout();
+        await goToCheckoutWithSingleProduct(PRODUCTS.atidGreenShoes.name);
         await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.deliveryExpress);
         await checkoutPage.verifyTotalsAfterShippingChange(CHECKOUT.shippingCosts.deliveryExpress);
         await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.registeredMail);
@@ -83,11 +89,7 @@ test.describe('Checkout Flow Shipping, Payment and Order Review', () => {
     })
 
     test('TC-035 Payment step accepts valid path', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidGreenShoes.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
-        await cartPage.goToCheckout();
+        await goToCheckoutWithSingleProduct(PRODUCTS.atidGreenShoes.name);
         await checkoutPage.selectShippingOption(CHECKOUT.shippingOptions.deliveryExpress);
         await checkoutPage.fillBillInfo(BILLING_ISRAEL)
         await checkoutPage.placeOrder();

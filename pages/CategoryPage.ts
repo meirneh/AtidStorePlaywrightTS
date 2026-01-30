@@ -11,7 +11,6 @@ export default class CategoryPage extends BasePage {
     private slidePriceFilterContainer: Locator;
     private slidePriceFilterTitle: Locator;
     private slidePriceFilter: Locator;
-    private priceSliderTrack: Locator;
     private slidePriceFilterMinPrice: Locator;
     private priceSliderMaxHandle: Locator;
     private priceSliderMinHandle: Locator;
@@ -30,7 +29,6 @@ export default class CategoryPage extends BasePage {
     private categoryCountByName: (name: string) => Locator;
     private categoryLinkByIndex: (index: number) => Locator;
     private categoryLinkByName: (name: string) => Locator;
-    private getCategoryProductCount: () => Promise<number>;
     private orderBySelect: Locator;
     private breadCrumbCategory: Locator;
     private linkGoHomeButton: Locator;
@@ -42,9 +40,6 @@ export default class CategoryPage extends BasePage {
     private bestSellersItems: Locator;
     private bestSellerLinkByIndex: (index: number) => Locator;
     private bestSellerLinkByName: (name: string) => Locator;
-    private bestSellerNames: () => Locator;
-    private bestSellerPrices: () => Locator;
-    private getBestSellersCount: () => Promise<number>;
 
     //=== Products ====
     private productContainer: Locator;
@@ -63,9 +58,12 @@ export default class CategoryPage extends BasePage {
         this.slidePriceFilterContainer = page.locator("#woocommerce_price_filter-2");
         this.slidePriceFilterTitle = page.locator("#woocommerce_price_filter-2 .widget-title");
         this.slidePriceFilter = page.locator(".price_slider.ui-slider.ui-corner-all.ui-slider-horizontal.ui-widget.ui-widget-content");
-        this.priceSliderTrack = page.locator(".ui-widget.ui-widget-content > div");
-        this.priceSliderMaxHandle = page.locator(".ui-widget-content > span:nth-child(3)");
-        this.priceSliderMinHandle = page.locator(".ui-widget-content > span:nth-child(2)");
+
+        // Handles: select by class and index (stable)
+        const sliderHandles = this.slidePriceFilter.locator(".ui-slider-handle");
+        this.priceSliderMinHandle = sliderHandles.nth(0);
+        this.priceSliderMaxHandle = sliderHandles.nth(1);
+
         this.slidePriceFilterMinPrice = page.locator(".price_slider_amount .price_label .from");
         this.slidePriceFilterMaxPrice = page.locator(".price_slider_amount .price_label .to")
         this.slidePriceFilterButton = page.locator(".price_slider_amount .button");
@@ -77,7 +75,6 @@ export default class CategoryPage extends BasePage {
         this.categoriesContainer = this.categoryList;
         this.categoryLinkByIndex = (index: number): Locator => this.categoryItems.nth(index).locator('a');
         this.categoryLinkByName = (name: string): Locator => this.categoryItems.filter({ has: this.page.locator("a", { hasText: new RegExp(`^${name}$`) }), }).locator('a');
-        this.getCategoryProductCount = async (): Promise<number> => this.categoriesContainer.count();
         this.categoryCountByIndex = (index: number) => this.categoryItems.nth(index).locator(".count");
         this.categoryItemByName = (name: string): Locator => this.categoryItems.filter({ has: this.page.locator("a", { hasText: new RegExp(`^${name}$`) }), });
         this.categoryCountByName = (name: string) => this.categoryItemByName(name).locator(".count");
@@ -92,9 +89,6 @@ export default class CategoryPage extends BasePage {
         this.bestSellersItems = this.bestSellersSection.locator(".product_list_widget li");
         this.bestSellerLinkByIndex = (index: number): Locator => this.bestSellersItems.nth(index).locator('a');
         this.bestSellerLinkByName = (name: string): Locator => this.bestSellersSection.locator(".product_list_widget li a").filter({ hasText: name });
-        this.bestSellerNames = (): Locator => this.bestSellersSection.locator(".product_list_widget li a");
-        this.bestSellerPrices = (): Locator => this.bestSellersSection.locator(".product_list_widget li .amount");
-        this.getBestSellersCount = async (): Promise<number> => this.bestSellersItems.count();
 
         //==== Sorting products ====
         this.orderBySelect = page.locator(".orderby");
@@ -128,6 +122,11 @@ export default class CategoryPage extends BasePage {
     }
 
     // ==== Slide filter price
+
+    private async waitForPriceLabelToEqual(label: Locator, expected: string, timeout = 7000): Promise<void> {
+        // Price label usually includes currency sign, e.g. "₪120".
+        await expect(label).toContainText(expected, { timeout });
+    }
 
     async getFilterByPriceTitle(): Promise<string> {
         return await this.getElementText(this.slidePriceFilterTitle);
@@ -180,7 +179,7 @@ export default class CategoryPage extends BasePage {
     async verifySlidePriceFilterButtonVisibleAndEnable(): Promise<void> {
         await this.waitForElementVisibility(this.slidePriceFilterButton);
         await this.isElementVisible(this.slidePriceFilterButton);
-        await this.isElementEnable(this.slidePriceFilter);
+        await this.isElementEnable(this.slidePriceFilterButton); // 
     }
 
     async verifySlidePriceFilterProductsVisible(): Promise<void> {
@@ -191,23 +190,43 @@ export default class CategoryPage extends BasePage {
         await this.verifySlidePriceFilterButtonVisibleAndEnable();
     }
 
-    async setSlideMaxPrice(dx: number): Promise<void> {
-        await this.waitForElementVisibility(this.priceSliderTrack, 1000);
+    async setSlideMaxPrice(dx: number, expectedMaxText?: string): Promise<void> {
+        await this.waitForElementVisibility(this.slidePriceFilter, 7000);
+        await this.priceSliderMaxHandle.scrollIntoViewIfNeeded();
+        await this.waitForElementVisibility(this.priceSliderMaxHandle, 7000);
+
         await this.dragElementByOffset(this.priceSliderMaxHandle, dx, 0);
+
+        if (expectedMaxText) {
+            await this.waitForPriceLabelToEqual(this.slidePriceFilterMaxPrice, expectedMaxText);
+        }
     }
 
-    async setSlideMinPrice(dx: number): Promise<void> {
-        await this.waitForElementVisibility(this.priceSliderTrack, 1000);
+    async setSlideMinPrice(dx: number, expectedMinText?: string): Promise<void> {
+        await this.waitForElementVisibility(this.slidePriceFilter, 7000);
+        await this.priceSliderMinHandle.scrollIntoViewIfNeeded();
+        await this.waitForElementVisibility(this.priceSliderMinHandle, 7000);
+
         await this.dragElementByOffset(this.priceSliderMinHandle, dx, 0);
+
+        if (expectedMinText) {
+            await this.waitForPriceLabelToEqual(this.slidePriceFilterMinPrice, expectedMinText);
+        }
     }
 
     async clickFilterButton(): Promise<void> {
         await this.clickElement(this.slidePriceFilterButton);
     }
 
-    async applyPriceRangeFilter(minPrice: number, maxPrice: number): Promise<void> {
-        await this.setSlideMaxPrice(maxPrice);
-        await this.setSlideMinPrice(minPrice);
+    async applyPriceRangeFilter(
+        minDx: number,
+        maxDx: number,
+        expectedMinText?: string,
+        expectedMaxText?: string,
+    ): Promise<void> {
+        // Move MIN first (right), then MAX (left)
+        await this.setSlideMinPrice(minDx, expectedMinText);
+        await this.setSlideMaxPrice(maxDx, expectedMaxText);
         await this.clickFilterButton();
     }
 
@@ -272,13 +291,13 @@ export default class CategoryPage extends BasePage {
     }
 
 
-    async getCategoryProductCountByIndex(index: number): Promise<number> {
+   /*  async getCategoryProductCountByIndex(index: number): Promise<number> {
         const item = this.categoryItems.nth(index);
         await this.waitForElementVisibility(item);
         const raw = await this.getElementText(this.categoryCountByIndex(index));
         const count = parseInt(raw.replace(/[^\d]/g, ""), 10);
         return count;
-    }
+    } */
 
     async getCategoryProductCountByName(name: string): Promise<number> {
         const item = this.categoryItemByName(name)
@@ -404,20 +423,31 @@ export default class CategoryPage extends BasePage {
     }
 
     async verifyPriceParamsInUrl(minPrice: number, maxPrice: number): Promise<void> {
-        const url = await this.getUrlStore();
-        const u = new URL(url);
-        const min = u.searchParams.get('min_price');
-        const max = u.searchParams.get('max_price');
-        expect(min, 'min_price should be in the URL').toBe(String(minPrice));
-        expect(max, 'max_price should be in the URL').toBe(String(maxPrice));
+        await expect.poll(async () => {
+            const u = new URL(this.page.url());
+            return {
+                min: u.searchParams.get('min_price'),
+                max: u.searchParams.get('max_price'),
+            };
+        }, { timeout: 7000 }).toEqual({
+            min: String(minPrice),
+            max: String(maxPrice),
+        });
     }
 
     async verifyNotPriceParamsInUrl(): Promise<void> {
-        const url = await this.getUrlStore();
-        const u = new URL(url);
-        expect(u.searchParams.get('min_price')).toBeNull();
-        expect(u.searchParams.get('max_price')).toBeNull();
+        await expect.poll(async () => {
+            const u = new URL(this.page.url());
+            return {
+                min: u.searchParams.get('min_price'),
+                max: u.searchParams.get('max_price'),
+            };
+        }, { timeout: 7000 }).toEqual({
+            min: null,
+            max: null,
+        });
     }
+
 
 
     //==== Products ====

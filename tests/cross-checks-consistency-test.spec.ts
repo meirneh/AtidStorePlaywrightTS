@@ -11,6 +11,10 @@ import { CATALOG } from '../utils/test-data/catalog';
 import { FORMATS } from '../utils/test-data/formats';
 import { CROSS_CHECKS_CONSISTENCY } from "../utils/test-data/cross-checks-consistency";
 import { CART } from "../utils/test-data/cart";
+import { goToStore } from "../utils/helpers/navigation";
+import { openCartFromPdp } from '../utils/helpers/pdp';
+import { openProductFromStore } from "../utils/helpers/store";
+import { addProductToCartFromStore } from "../utils/helpers/cart-actions";
 
 let browser: Browser;
 let context: BrowserContext;
@@ -22,6 +26,26 @@ let cartPage: CartPage;
 
 test.describe('Cross-Checks & Consistency — Price and totals consistency across Listing, PDP, Cart, and Checkout', () => {
     const atidBlueShoesName = PRODUCTS.atidBlueShoes.name;
+
+    const normalizeText = (s: string): string =>
+        s
+            .replace(/\u00A0/g, " ")
+            .replace(/[\u200E\u200F]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+    
+    const goToStoreTab = async () => {
+        await goToStore(headerFooterPage, NAV.tabs.store);
+    };
+
+    const openProduct = async (productName: string) => {
+        await openProductFromStore(goToStoreTab, categoryPage, productName);
+    };
+
+    const reloadPage = async () => {
+        await page.reload();
+    };
+
     test.beforeEach(async () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
@@ -40,38 +64,25 @@ test.describe('Cross-Checks & Consistency — Price and totals consistency acros
     })
 
     test('TC-053 Listing price equals PDP price', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await goToStoreTab();
         const listingPriceText = await categoryPage.getProductPriceByName(atidBlueShoesName);
         await categoryPage.selectProductByName(atidBlueShoesName);
         const pdpPriceText = await productDetailsPage.getProductCurrentPriceText();
-        expect(pdpPriceText.trim()).toBe(listingPriceText.trim());
+        expect(normalizeText(pdpPriceText)).toBe(normalizeText(listingPriceText));
     });
 
     test('TC-054 PDP/Cart unit price consistency', async () => {
-        const normalize = (s: string): string =>
-            s
-                .replace(/\u00A0/g, " ")        // NBSP
-                .replace(/[\u200E\u200F]/g, "") // LRM/RLM (RTL marks)
-                .replace(/\s+/g, " ")
-                .trim();
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(atidBlueShoesName);
+        await openProduct(PRODUCTS.atidBlueShoes.name);
         const pdpPriceText = await productDetailsPage.getProductCurrentPriceText();
         await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
-        const productPriceInCart = await cartPage.getCartUnitPriceTextByName(atidBlueShoesName);
-        expect(normalize(pdpPriceText)).toBe(normalize(productPriceInCart));
+        await openCartFromPdp(productDetailsPage);
     });
 
     test("TC-055 Rounding of totals is consistent", async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidBlueShoes.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.blackHoodie.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
+        await addProductToCartFromStore(openProduct,productDetailsPage,PRODUCTS.atidBlueShoes.name);
+        await openCartFromPdp(productDetailsPage);
+        await addProductToCartFromStore(openProduct, productDetailsPage,PRODUCTS.blackHoodie.name);
+        await openCartFromPdp(productDetailsPage);
         await cartPage.verifyCartTotalsSubtotalText(
             CROSS_CHECKS_CONSISTENCY.expectedSubtotals.blueShoesPlusHoodie
         );
@@ -86,53 +97,42 @@ test.describe('Cross-Checks & Consistency — Price and totals consistency acros
     });
 
     test('TC-056 Header CartBadge matches sum of quantities ', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.atidBlueShoes.name);
-        await productDetailsPage.addToCart();
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.selectProductByName(PRODUCTS.blackHoodie.name);
-        await productDetailsPage.addToCart();
-        await productDetailsPage.viewCart();
+        await addProductToCartFromStore(openProduct, productDetailsPage, PRODUCTS.atidBlueShoes.name);
+        await addProductToCartFromStore(openProduct, productDetailsPage, PRODUCTS.blackHoodie.name);
+        await openCartFromPdp(productDetailsPage);
         await cartPage.setAndUpdateQty(PRODUCTS.atidBlueShoes.name, CART.quantities.two);
-        await page.reload();
+        await reloadPage();
         await cartPage.verifyQuantities([
             { term: PRODUCTS.blackHoodie.name, expectedQty: CART.quantities.one },
-            { term: PRODUCTS.atidBlueShoes.name, expectedQty: CART.quantities.two},
+            { term: PRODUCTS.atidBlueShoes.name, expectedQty: CART.quantities.two },
         ]);
         const totalQtyInCartPage = await cartPage.getTotalQuantityInCart();
         const badgeQty = await headerFooterPage.getQuantityItemsInCartCount();
         expect(badgeQty).toBe(totalQtyInCartPage);
-    })
+    });
 
     test('TC-057 Currency symbol is consistent across pages', async () => {
-        const normalize = (s: string): string =>
-            s
-                .replace(/\u00A0/g, " ")
-                .replace(/[\u200E\u200F]/g, "")
-                .replace(/\s+/g, " ")
-                .trim();
         const PRICE_ILS_PATTERN = FORMATS.priceIlsPattern;
-
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-
+        await goToStoreTab();
+       
         // 1) Store/listing (cards)
         const listingPriceText = await categoryPage.getProductPriceByName(atidBlueShoesName);
-        expect(normalize(listingPriceText)).toMatch(PRICE_ILS_PATTERN);
+        expect(normalizeText(listingPriceText)).toMatch(PRICE_ILS_PATTERN);
 
         // 2) PDP
         await categoryPage.selectProductByName(atidBlueShoesName);
         const pdpPriceText = await productDetailsPage.getProductCurrentPriceText();
-        expect(normalize(pdpPriceText)).toMatch(PRICE_ILS_PATTERN);
+        expect(normalizeText(pdpPriceText)).toMatch(PRICE_ILS_PATTERN);
 
         // 3) Header total price
         await productDetailsPage.addToCart();
         const headerTotalText = await headerFooterPage.getTotalItemsPriceInCart();
-        expect(normalize(headerTotalText)).toMatch(PRICE_ILS_PATTERN);
+        expect(normalizeText(headerTotalText)).toMatch(PRICE_ILS_PATTERN);
 
         // 4) Cart page
-        await productDetailsPage.viewCart();
+        await openCartFromPdp(productDetailsPage);
         const cartUnitPriceText = await cartPage.getCartUnitPriceTextByName(atidBlueShoesName);
-        expect(normalize(cartUnitPriceText)).toMatch(PRICE_ILS_PATTERN);
+        expect(normalizeText(cartUnitPriceText)).toMatch(PRICE_ILS_PATTERN);
     });
 
     test('TC-058 Breadcrumbs reflect navigation ', async () => {
@@ -144,8 +144,5 @@ test.describe('Cross-Checks & Consistency — Price and totals consistency acros
         await categoryPage.verifyBreadCrumbCategoryText(CATALOG.categories.men);
         await categoryPage.goToHomePageByBreadCrumb();
         await expect(page).toHaveURL(SITE.baseUrl);
-    })
-
-
-
+    });
 })

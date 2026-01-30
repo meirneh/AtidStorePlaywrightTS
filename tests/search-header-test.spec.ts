@@ -7,6 +7,7 @@ import { SITE } from "../utils/test-data/site";
 import { NAV } from "../utils/test-data/navigation";
 import { SEARCH } from "../utils/test-data/search";
 
+
 let browser: Browser;
 let context: BrowserContext;
 let page: Page;
@@ -15,6 +16,26 @@ let searchResultPage: SearchResultPage;
 let categoryPage: CategoryPage;
 
 test.describe('Header Search Functionality Verification', () => {
+
+    const goToTab = async (tab: any) => {
+        await headerFooterPage.navigateToTab(tab);
+    };
+
+    const headerSearchAndVerifyResults = async (term: string, expectedCount?: number) => {
+        await headerFooterPage.searchValue(term);
+        await searchResultPage.verifyResultsTitleText(term);
+        if (expectedCount !== undefined) {
+            await searchResultPage.verifyCountResults(expectedCount);
+        }
+    };
+
+    const sidebarSearchInCatalogAndVerifyCount = async (initialCount: number, term: string, filteredCount: number) => {
+        await goToTab(NAV.tabs.store);
+        await categoryPage.verifyCountProducts(initialCount);
+        await categoryPage.searchValue(term);
+        await categoryPage.verifyCountProducts(filteredCount);
+    };
+
     test.beforeEach(async () => {
         browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
         context = await browser.newContext();
@@ -31,21 +52,18 @@ test.describe('Header Search Functionality Verification', () => {
     });
 
     test('TC-013 Header search navigates to results ', async () => {
-        await headerFooterPage.searchValue("shirt");
-        await searchResultPage.verifyResultsTitleText("shirt");
-        await searchResultPage.verifyCountResults(8);
-
-
+        await headerSearchAndVerifyResults(SEARCH.header.term, SEARCH.header.expectedResultsCount);
     })
 
     test('TC-014 Sidebar search filters within catalog context ', async () => {
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
-        await categoryPage.verifyCountProducts(SEARCH.sidebarCatalog.initialProductsCount);
+        await sidebarSearchInCatalogAndVerifyCount(
+            SEARCH.sidebarCatalog.initialProductsCount,
+            SEARCH.sidebarCatalog.term,
+            SEARCH.sidebarCatalog.filteredProductsCount
+        );
         await categoryPage.searchValue(SEARCH.sidebarCatalog.term);
-        await categoryPage.verifyCountProducts(SEARCH.sidebarCatalog.filteredProductsCount);
-        await categoryPage.searchValue(SEARCH.sidebarCatalog.term);
-        await headerFooterPage.navigateToTab(NAV.tabs.home);
-        await headerFooterPage.navigateToTab(NAV.tabs.store);
+        await goToTab(NAV.tabs.home);
+        await goToTab(NAV.tabs.store);
     })
 
     test('TC-015 Negative empty header search does not trigger navigation ', async () => {
@@ -64,8 +82,7 @@ test.describe('Header Search Functionality Verification', () => {
     })
 
     test('TC-017 Search term echo is visible ', async () => {
-        await headerFooterPage.searchValue(SEARCH.echo.term);
-        await searchResultPage.verifyResultsTitleText(SEARCH.echo.term);
+        await headerSearchAndVerifyResults(SEARCH.echo.term);
     })
 
 

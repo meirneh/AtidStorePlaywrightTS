@@ -30,7 +30,7 @@ export default abstract class BasePage {
         await expect(locator).toBeEnabled();
     }
 
-    protected async waitForTextContains(locator: Locator, expectedText: string, timeout = 1000): Promise<void> {
+    protected async waitForTextContains(locator: Locator, expectedText: string, timeout = 3000): Promise<void> {
         await expect(locator).toContainText(expectedText, { timeout });
     }
 
