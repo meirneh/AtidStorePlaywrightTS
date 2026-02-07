@@ -1,11 +1,11 @@
-import { test, expect, chromium, Browser, Page, BrowserContext } from "@playwright/test";
-import HeaderFooterPage from "../pages/HeaderFooterPage";
-import CategoryPage from "../pages/CategoryPage";
-import AboutPage from "../pages/AboutPage";
-import ContactUsPage from "../pages/ContacUsPage";
-import ProductDetailsPage from '../pages/ProductDetailsPage';
 
-import { SITE } from "../utils/test-data/site";
+import { test, expect } from "../utils/fixtures/baseTest";
+import type HeaderFooterPage from "../pages/HeaderFooterPage";
+import type CategoryPage from "../pages/CategoryPage";
+import type AboutPage from "../pages/AboutPage";
+import type ContactUsPage from "../pages/ContacUsPage";
+import type ProductDetailsPage from '../pages/ProductDetailsPage';
+
 import { NAV } from "../utils/test-data/navigation";
 import { CART } from "../utils/test-data/cart";
 import { PRODUCTS } from "../utils/test-data/products";
@@ -14,36 +14,34 @@ import { goToStore } from "../utils/helpers/navigation";
 import { openProductFromStore } from '../utils/helpers/store';
 import { addProductToCartFromStore } from "../utils/helpers/cart-actions";
 
-let browser: Browser;
-let context: BrowserContext;
-let page: Page;
-let headerFooterPage: HeaderFooterPage;
-let categoryPage: CategoryPage;
-let aboutPage: AboutPage;
-let contactUsPage: ContactUsPage;
-let productDetailsPage: ProductDetailsPage;
-
 const cases = HEADER_FOOTER_COMPONENT_REUSE.cases;
+type HeaderFooterCase = (typeof cases)[number];
 
 test.describe('Header/Footer Component Reuse — cross-page header/footer consistency', () => {
 
-    const goToStoreTab = async () => {
+    const goToStoreTab = async (headerFooterPage: HeaderFooterPage) => {
         await goToStore(headerFooterPage, NAV.tabs.store);
     };
 
-    const openProduct = async (productName: string) => {
-        await openProductFromStore(goToStoreTab, categoryPage, productName);
+    const openProduct = async (headerFooterPage: HeaderFooterPage, categoryPage: CategoryPage, productName: string) => {
+        await openProductFromStore(() => goToStoreTab(headerFooterPage), categoryPage, productName);
     };
 
-
-    const warmUpNavState = async () => {
+    const warmUpNavState = async (headerFooterPage: HeaderFooterPage) => {
         await goToStore(headerFooterPage, NAV.tabs.store);
         await headerFooterPage.goToSelectedTab(NAV.tabs.contactUs);
-    };
+    }
 
-    const verifyCaseLanding = async (c: any) => {
-        await headerFooterPage.navigateToTab(c.tab);
-        await expect(page).toHaveURL(c.url);
+    const verifyCaseLanding = async ( 
+        page: import("@playwright/test").Page, 
+        headerFooterPage: HeaderFooterPage, 
+        categoryPage: CategoryPage, 
+        aboutPage: AboutPage, 
+        contactUsPage: ContactUsPage, 
+        c: HeaderFooterCase 
+    ) => { 
+        await headerFooterPage.navigateToTab(c.tab); 
+        await expect(page).toHaveURL(c.url); 
 
         if (c.breadcrumb) {
             await categoryPage.verifyBreadCrumbCategoryText(c.breadcrumb);
@@ -58,35 +56,35 @@ test.describe('Header/Footer Component Reuse — cross-page header/footer consis
         }
     };
 
-    const verifyHeaderAcrossCases = async () => {
+    const verifyHeaderAcrossCases = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage, categoryPage: CategoryPage, aboutPage: AboutPage, contactUsPage: ContactUsPage) => {
         for (const c of cases) {
-            await verifyCaseLanding(c);
+            await verifyCaseLanding(page, headerFooterPage, categoryPage, aboutPage, contactUsPage, c);
         }
     }
 
-    const addOneProductToCartFromStore = async () => {
+    const addOneProductToCartFromStore = async (headerFooterPage: HeaderFooterPage, categoryPage: CategoryPage, productDetailsPage: ProductDetailsPage) => {
         await addProductToCartFromStore(
-            openProduct,
+            (pn: string) => openProduct(headerFooterPage, categoryPage, pn),
             productDetailsPage,
             PRODUCTS.atidGreenShoes.name
         );
     };
 
 
-    const verifyCartBadgeAcrossCases = async (expectedQty: string) => {
+    const verifyCartBadgeAcrossCases = async (headerFooterPage: HeaderFooterPage, expectedQty: string) => {
         for (const c of cases) {
             await headerFooterPage.navigateToTab(c.tab);
             await headerFooterPage.verifyQuantityItemsInCart(expectedQty);
         }
     };
 
-    const openSearchAndVerifyFieldVisible = async () => {
+    const openSearchAndVerifyFieldVisible = async (headerFooterPage: HeaderFooterPage) => {
         await goToStore(headerFooterPage, NAV.tabs.store);
         await headerFooterPage.clickSearch();
         await headerFooterPage.verifySearchFieldVisible();
     };
 
-    const verifySearchBarDisabledAcrossCases = async () => {
+    const verifySearchBarDisabledAcrossCases = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage) => {
         for (const c of cases) {
             await headerFooterPage.navigateToTab(c.tab);
             await expect(page).toHaveURL(c.url);
@@ -94,38 +92,23 @@ test.describe('Header/Footer Component Reuse — cross-page header/footer consis
         }
     }
 
-    test.beforeEach(async () => {
-        browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
-        context = await browser.newContext();
-        page = await context.newPage();
-        await page.goto(SITE.baseUrl);
-        headerFooterPage = new HeaderFooterPage(page);
-        categoryPage = new CategoryPage(page);
-        aboutPage = new AboutPage(page);
-        contactUsPage = new ContactUsPage(page);
-        productDetailsPage = new ProductDetailsPage(page);
-    });
-
-    test.afterAll(async () => {
-        await context?.close();
-        await page?.close();
-    })
-
-    test('TC-059 Header appears on all main pages', async () => {
-        await warmUpNavState();
-        await verifyHeaderAcrossCases();
-    })
-
-    test('TC-061 CartBadge/amount present across pages ', async () => {
-        await addOneProductToCartFromStore();
-        await verifyCartBadgeAcrossCases(String(CART.quantities.one));
-    })
-
-    test('TC-062 Negative header actions do not break page state ', async () => {
-        await openSearchAndVerifyFieldVisible();
-        await verifySearchBarDisabledAcrossCases();
+    test.beforeEach(async ({ goHome }) => {
+        await goHome();
     })
 
 
+    test('TC-059 Header appears on all main pages', async ({ page, headerFooterPage, categoryPage, aboutPage, contactUsPage }) => {
+        await warmUpNavState(headerFooterPage);
+        await verifyHeaderAcrossCases(page, headerFooterPage, categoryPage, aboutPage, contactUsPage);
+    })
 
+    test('TC-061 CartBadge/amount present across pages ', async ({headerFooterPage, categoryPage, productDetailsPage}) => {
+        await addOneProductToCartFromStore(headerFooterPage, categoryPage, productDetailsPage);
+        await verifyCartBadgeAcrossCases(headerFooterPage, String(CART.quantities.one));
+    })
+
+    test('TC-062 Negative header actions do not break page state ', async ({page, headerFooterPage}) => {
+        await openSearchAndVerifyFieldVisible(headerFooterPage);
+        await verifySearchBarDisabledAcrossCases(page, headerFooterPage);
+    })
 })

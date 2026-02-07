@@ -154,9 +154,9 @@ export default class CategoryPage extends BasePage {
     }
 
     async verifySlidePriceFilterMinPrice(expectedPrice: string): Promise<void> {
-        const actualPrice = ((await this.getSlidePriceFilterMinPrice()).trim());
-        expect(actualPrice).toEqual(expectedPrice);
+        await expect(this.slidePriceFilterMinPrice).toContainText(expectedPrice, { timeout: 3000 });
     }
+
 
     async getSlidePriceFilterMaxPrice(): Promise<string> {
         return (await this.getElementText(this.slidePriceFilterMaxPrice)).replace("₪", "");
@@ -168,8 +168,7 @@ export default class CategoryPage extends BasePage {
     }
 
     async verifySlidePriceFilterMaxPrice(expectedPrice: string): Promise<void> {
-        const actualPrice = ((await this.getSlidePriceFilterMaxPrice()).trim());
-        expect(actualPrice).toEqual(expectedPrice);
+        await expect(this.slidePriceFilterMaxPrice).toContainText(expectedPrice, { timeout: 3000 });
     }
 
     async getSlidePriceFilterButton(): Promise<string> {
@@ -291,13 +290,13 @@ export default class CategoryPage extends BasePage {
     }
 
 
-   /*  async getCategoryProductCountByIndex(index: number): Promise<number> {
-        const item = this.categoryItems.nth(index);
-        await this.waitForElementVisibility(item);
-        const raw = await this.getElementText(this.categoryCountByIndex(index));
-        const count = parseInt(raw.replace(/[^\d]/g, ""), 10);
-        return count;
-    } */
+    /*  async getCategoryProductCountByIndex(index: number): Promise<number> {
+         const item = this.categoryItems.nth(index);
+         await this.waitForElementVisibility(item);
+         const raw = await this.getElementText(this.categoryCountByIndex(index));
+         const count = parseInt(raw.replace(/[^\d]/g, ""), 10);
+         return count;
+     } */
 
     async getCategoryProductCountByName(name: string): Promise<number> {
         const item = this.categoryItemByName(name)
@@ -560,26 +559,30 @@ export default class CategoryPage extends BasePage {
         await this.waitForElementVisibility(productTitle);
         await this.clickElement(productTitle);
     }
-
     async getProductPriceByName(productName: string): Promise<string> {
-        const count = await this.productContainer.count();
+        const productCard = this.page
+            .locator("li.product")
+            .filter({
+                has: this.page.locator(".woocommerce-loop-product__title", {
+                    hasText: new RegExp(productName.trim(), "i"),
+                }),
+            })
+            .first();
 
-        for (let i = 0; i < count; i++) {
-            const product = this.productContainer.nth(i);
+        await this.waitForElementVisibility(productCard);
 
-            const name = (await this.getElementText(product.locator(".woocommerce-loop-product__title"))).trim();
+        const priceRoot = productCard.locator(".price");
+        await this.waitForElementVisibility(priceRoot);
 
-            if (name.toLowerCase().includes(productName.trim().toLowerCase())) {
-                const priceLocator = product.locator(".price .woocommerce-Price-amount").last();
-                const price = (await this.getElementText(priceLocator)).trim();
-                return price;
-            }
+        const saleAmount = priceRoot.locator("ins .woocommerce-Price-amount");
+        const regularAmount = priceRoot.locator(".woocommerce-Price-amount").first();
+
+        if (await saleAmount.count()) {
+            return (await this.getElementText(saleAmount.first())).trim();
         }
 
-        throw new Error(`Product not found in category/store listing: "${productName}"`);
+        return (await this.getElementText(regularAmount)).trim();
     }
-
-
     //==== Search Bar ====
     async fillSearchValue(value: string): Promise<void> {
         await this.fillText(this.searchBar, value);
@@ -593,8 +596,5 @@ export default class CategoryPage extends BasePage {
         await this.fillSearchValue(value);
         await this.clickSearchButton();
     }
-
-
-
 
 }

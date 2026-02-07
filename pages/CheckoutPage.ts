@@ -106,49 +106,58 @@ export default class CheckoutPage extends BasePage {
         }
     }
 
-    async verifyProductQuantities(input: ExpectedQty | ExpectedQty[]): Promise<void> {
-        const expectedList = Array.isArray(input) ? input : [input];
+   
+    async verifyProductQuantities(
+  input: ExpectedQty | ExpectedQty[] // NEW
+): Promise<void> {
 
-        const rows = this.page.locator('tr.cart_item');
-        const rowCount = await rows.count();
-        expect(rowCount, 'No cart items found in "Your order"').toBeGreaterThan(0);
+  const expectedList = Array.isArray(input) ? input : [input];
+  const orderReviewTable = this.page.locator('.woocommerce-checkout-review-order-table');
+  await expect(orderReviewTable, '"Your order" table should be visible').toBeVisible({ timeout: 7000 });
 
-        // We created a map: visibleName -> quantity
-        const nameToQty: Record<string, number> = {};
+  const rows = this.page.locator('tr.cart_item');
+  await expect
+    .poll(async () => await rows.count(), { timeout: 7000 })
+    .toBeGreaterThan(0);
 
-        for (let i = 0; i < rowCount; i++) {
-            const row = rows.nth(i);
+  // Build map: visibleName -> qty
+  const nameToQty: Record<string, number> = {};
+  const rowCount = await rows.count();
 
-            const nameCell = row.locator('td.product-name');
-            const rawName = await this.getElementText(nameCell);
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const rawName = (await row.locator('td.product-name').innerText()).trim();
+    const normalizedName = rawName
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/×\s*\d+/g, '') 
+      .trim();
+    const qtyText = await row.locator('td.product-name strong').innerText();
+    const qty = Number(qtyText.replace(/[^\d]/g, '')); // "× 1" -> 1
 
-            const qtyText = await this.getElementText(row.locator('td.product-name .product-quantity'));
-            const qty = parseInt(qtyText.replace(/[^\d]/g, ''), 10); // "× 2" -> 2
+    nameToQty[normalizedName] = qty;
+  }
 
-            // We normalized it a bit to avoid NBSP
-            const normalizedName = rawName.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-            nameToQty[normalizedName] = qty;
-        }
+  const actualNames = Object.keys(nameToQty);
 
-        // We verify each expected by "term" (same as your verifyProductContain)
-        const actualNames = Object.keys(nameToQty);
+  for (const { term, expectedQty } of expectedList) {
+    const search = term.toLowerCase().trim();
+    const matchedName = actualNames.find(n => n.toLowerCase().includes(search));
 
-        for (const { term, expectedQty } of expectedList) {
-            const search = term.toLowerCase().trim();
-            const matchedName = actualNames.find(n => n.toLowerCase().includes(search));
+    expect(
+      matchedName,
+      `Product not found for qty check. term="${term}". Actual: ${actualNames.join(' | ')}`
+    ).toBeTruthy();
 
-            expect(
-                matchedName,
-                `Product not found for qty check. term="${term}". Actual: ${actualNames.join(' | ')}`
-            ).toBeTruthy();
+    const actualQty = nameToQty[matchedName!];
+    expect(
+      actualQty,
+      `Qty mismatch for "${matchedName}". Expected ${expectedQty}, got ${actualQty}`
+    ).toBe(expectedQty);
+  }
+}
 
-            const actualQty = nameToQty[matchedName!];
-            expect(
-                actualQty,
-                `Qty mismatch for "${matchedName}". Expected ${expectedQty}, got ${actualQty}`
-            ).toBe(expectedQty);
-        }
-    }
+
 
     private parsePrice(text: string): number {
         // Normalizes NBSP and space
@@ -235,8 +244,6 @@ export default class CheckoutPage extends BasePage {
         const actualNumber = await this.getOrderTotal();
         expect(actualNumber).toEqual(expectedTotal);
     }
-
-
 
     async verifyOrderDetails(
         inputQty: ExpectedQty | ExpectedQty[],

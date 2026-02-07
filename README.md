@@ -1,72 +1,132 @@
-# Atid Store Playwright (TypeScript) – E2E Automation (Demo / Portfolio)
+# 🧪 Atid Store – Playwright Automation Project
 
-This is a learning and portfolio project built using **Playwright with TypeScript**, based on a demo e-commerce application.
-The goal of this project is to practice and demonstrate good E2E automation practices, structure, and stability.
+This project is an **end-to-end test automation suite built with Playwright and TypeScript**, designed as a **professional QA Automation portfolio project**.
 
-## Scope
-- ~58 end-to-end test cases
-- All test suites aligned with an internal STD
-- Stable execution baseline on Chromium
+The application under test is a real e‑commerce site:
+👉 https://atid.store (WordPress + WooCommerce)
 
-## Tech Stack
+---
+
+## 🧱 Tech Stack
+
 - Playwright
 - TypeScript
 - Page Object Model (POM)
+- Custom Playwright fixtures
+- Stateless reusable helpers
+- Deterministic test execution
 
-## Project Structure
-- `tests/` – Test specifications grouped by functional suites
-- `pages/` – Page Object Model implementations
-- `utils/` – Utilities and shared helpers (test data, helpers)
-- `playwright.config.ts` – Playwright configuration
+---
 
-## How to Run
+## 📁 Project Structure
 
-Install dependencies:
-```bash
-npm install
+```text
+AtidStoreAutomation/
+│
+├── pages/                 # Page Objects (UI logic only)
+├── tests/                 # Test specs grouped by feature
+├── utils/
+│   ├── fixtures/          # baseTest.ts (custom Playwright fixtures)
+│   ├── helpers/           # Stateless reusable helpers
+│   └── test-data/         # Static test data (products, navigation, cart, etc.)
+│
+├── playwright.config.ts
+└── README.md
 ```
 
-Run the official baseline:
+---
+
+## ▶️ How to Run Tests
+
+### Run **all tests**
+```bash
+npx playwright test
+```
+
+### Run using **Chromium with a single worker** (baseline)
 ```bash
 npx playwright test --project=chromium --workers=1
 ```
 
-Open the last HTML report:
+### Run a **specific spec file**
 ```bash
-npx playwright show-report
+npx playwright test tests/header-navigation-test.spec.ts --project=chromium --workers=1
 ```
 
-## Execution Policy
-- **Official baseline:** Chromium + `--workers=1`
-- Running with multiple workers (e.g. `--workers=4`) may produce worker teardown timeout warnings due to demo/environment limitations.
-- These warnings do not indicate functional test failures.
+> ℹ️ `--workers=1` is intentional to reduce flakiness on this real WooCommerce site.
 
-## Cross-Browser
-- Cross-browser execution (Chromium, Firefox, WebKit) is considered an optional hardening stage.
-- A small number of tests may fail cross-browser due to engine differences and demo limitations.
+---
 
-## Stage 2 – Global Helpers Optimization
-Stage 2 focuses on reducing duplication and improving maintainability by introducing reusable global helpers under `utils/helpers/`,
-while keeping readability via local wrappers inside each `describe`.
+## 🧪 Test Strategy
 
-Rules applied during Stage 2:
-- Keep local wrapper helpers at the beginning of each `describe`
-- No artificial waits
-- No changes to hooks/fixtures during this stage
-- Each migrated spec is validated before proceeding
+- Tests are **independent and deterministic**
+- No shared state between tests
+- Each test starts from a **known initial state**
+- No hard waits (`waitForTimeout`)
+- Synchronization is based on DOM and UI state
 
-Key global helpers added/used:
-- `openProductFromStore` – Navigate to Store and open a product by name
-- `reloadDom` – `page.reload({ waitUntil: "domcontentloaded" })` wrapper
-- `verifyHeaderCartBadgeAndTotal` – Stable header badge/total verification
-- `addProductToCartFromStore` – open product + add to cart
-- `addProductToCartFromStoreAndOpenCart` – open product + add to cart + open cart
+---
 
-## Versioning
-- `v1.0-baseline` – Stable baseline: tests passing on Chromium with `--workers=1`.
-- `v1.1-stage1-hardcoded-cleanup` – Stage 1 refactor and cleanup after baseline stabilization.
-- `v1.2-stage2-helpers` – Stage 2 global helpers introduced + specs migrated and validated spec-by-spec.
+## 🧷 Custom Fixtures (baseTest.ts)
 
-## Notes
-This project is not a production system and not a home assignment.
-It is intended solely for learning, experimentation, and portfolio demonstration.
+The project uses **custom Playwright fixtures** to inject Page Objects automatically.
+
+Example:
+```ts
+test("example", async ({ headerFooterPage, categoryPage }) => {
+  await headerFooterPage.navigateToTab("STORE");
+});
+```
+
+### Available fixtures
+- `headerFooterPage`
+- `categoryPage`
+- `productDetailsPage`
+- `cartPage`
+- `checkoutPage`
+- `aboutPage`
+- `contactUsPage`
+- `searchResultPage`
+- `goHome()` → navigates to the home page in a controlled way
+
+---
+
+## 🟢 Stage 3 – Fixtures & Test Lifecycle (COMPLETED)
+
+### What was achieved
+
+✔ All specs migrated to fixtures  
+✔ No manual `new PageObject(page)` in specs  
+✔ No global `let page` / `let headerFooterPage`  
+✔ Correct usage of `beforeEach` (no `afterEach` misuse)  
+✔ Helpers are stateless and dependency-injected  
+✔ Full project scan confirms zero violations  
+
+Stage 3 is **closed** ✅
+
+---
+
+## 🧪 Test Coverage
+
+- Header & footer navigation
+- Home and global navigation
+- Header and sidebar search
+- Product Details Page (PDP)
+- Cart behavior
+- Checkout flow (without payment)
+- Coupons and promotions
+- Static pages (About, Contact)
+
+---
+
+## 🧭 Roadmap
+
+- **Stage 4**: Helpers consolidation & cleanup
+- **Stage 5**: Allure reporting (optional)
+- **Stage 6**: Final polishing for interviews & GitHub
+
+---
+
+## 👤 Author
+
+Built as a **professional QA Automation portfolio project** focused on clarity, maintainability, and real-world practices.

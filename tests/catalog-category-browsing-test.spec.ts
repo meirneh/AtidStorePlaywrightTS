@@ -1,9 +1,6 @@
-import { test, expect, chromium, Browser, Page, BrowserContext } from "@playwright/test";
-import HeaderFooterPage from "../pages/HeaderFooterPage";
-import CategoryPage from "../pages/CategoryPage";
-import ProductDetailsPage from "../pages/ProductDetailsPage";
+import {test, expect} from "../utils/fixtures/baseTest";
+import type CategoryPage from "../pages/CategoryPage";
 
-import { SITE } from "../utils/test-data/site";
 import { NAV } from "../utils/test-data/navigation";
 import { CATALOG } from "../utils/test-data/catalog";
 import { goToStore } from "../utils/helpers/navigation";
@@ -16,24 +13,16 @@ const categoryList = [
 
 const itemsList = CATALOG.bestSellersItems;
 
-let browser: Browser;
-let context: BrowserContext;
-let page: Page;
-let headerFooterPage: HeaderFooterPage;
-let categoryPage: CategoryPage;
-let productDetailsPage: ProductDetailsPage;
-
 test.describe('categories borwsing tests suite', () => {
 
-    const verifySidebarWidgets = async () => {
+    const verifySidebarWidgets = async (categoryPage: CategoryPage) => {
         await categoryPage.verifySearchProductsVisibleAndEnable();
         await categoryPage.verifySlidePriceFilterProductsVisible();
         await categoryPage.verifyCategoriesVisible(categoryList);
         await categoryPage.verifyBestSellersItemsVisible([...itemsList]);
-
     };
 
-    const verifyDefaultRangePricesOnly = async () => {
+    const verifyDefaultRangePricesOnly = async (categoryPage: CategoryPage) => {
         await categoryPage.verifySlidePriceFilterProductsVisible();
 
         await categoryPage.verifySlidePriceFilterMinPrice(String(CATALOG.priceFilter.defaultRange.min));
@@ -45,7 +34,7 @@ test.describe('categories borwsing tests suite', () => {
         );
     };
 
-    const applyNarrowedPriceRangeAndVerify = async () => {
+    const applyNarrowedPriceRangeAndVerify = async (categoryPage: CategoryPage) => {
         await categoryPage.verifySlidePriceFilterProductsVisible();
 
         await categoryPage.applyPriceRangeFilter(
@@ -70,7 +59,7 @@ test.describe('categories borwsing tests suite', () => {
         );
     };
 
-    const verifyPostReturnToStoreState = async () => {
+    const verifyPostReturnToStoreState = async (categoryPage: CategoryPage) => {
         await categoryPage.verifySlidePriceFilterMinPrice(String(CATALOG.priceFilter.defaultRange.min));
         await categoryPage.verifySlidePriceFilterMaxPrice(String(CATALOG.priceFilter.defaultRange.max));
         await categoryPage.verifyNotPriceParamsInUrl();
@@ -80,41 +69,30 @@ test.describe('categories borwsing tests suite', () => {
         );
     };
 
-    test.beforeEach(async () => {
-        browser = await chromium.launch({ channel: "chrome", slowMo: 500 });
-        context = await browser.newContext();
-        page = await context.newPage();
-        await page.goto(SITE.baseUrl);
-        headerFooterPage = new HeaderFooterPage(page);
-        categoryPage = new CategoryPage(page);
-        productDetailsPage = new ProductDetailsPage(page);
-    });
-
-    test.afterAll(async () => {
-        await context?.close();
-        await page?.close();
+    test.beforeEach(async ({ goHome }) => {
+        await goHome();
+    })
+    
+    test('TC-008 Category pages display sidebar widgets ', async ({headerFooterPage, categoryPage}) => {
+        await goToStore(headerFooterPage, NAV.tabs.store);
+        await verifySidebarWidgets(categoryPage);
     })
 
-    test('TC-008 Category pages display sidebar widgets ', async () => {
+    test("TC-009 Filter by price narrows the list ", async ({headerFooterPage,categoryPage}) => {
         await goToStore(headerFooterPage, NAV.tabs.store);
-        await verifySidebarWidgets();
-    })
-
-    test("TC-009 Filter by price narrows the list ", async () => {
-        await goToStore(headerFooterPage, NAV.tabs.store);
-        await verifyDefaultRangePricesOnly();
-        await applyNarrowedPriceRangeAndVerify();
+        await verifyDefaultRangePricesOnly(categoryPage);
+        await applyNarrowedPriceRangeAndVerify(categoryPage);
         await goToStore(headerFooterPage, NAV.tabs.store);;
-        await verifyPostReturnToStoreState();
+        await verifyPostReturnToStoreState(categoryPage);
     });
-    test('TC-010 Category link filters listing ', async () => {
-        await goToStore(headerFooterPage, NAV.tabs.store);;
+    test('TC-010 Category link filters listing ', async ({headerFooterPage, categoryPage}) => {
+        await goToStore(headerFooterPage, NAV.tabs.store);
         await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.accessories);
         await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.men);
         // await categoryPage.selectCategoryAndVerifyProducts(CATALOG.categories.women);
     })
 
-    test('TC-011 Best Sellers link opens Product Details Page ', async () => {
+    test('TC-011 Best Sellers link opens Product Details Page ', async ({headerFooterPage, categoryPage, productDetailsPage}) => {
         await goToStore(headerFooterPage, NAV.tabs.store);;
         for (const producName of itemsList) {
             await categoryPage.selectBestSellerByName(producName);
@@ -124,7 +102,7 @@ test.describe('categories borwsing tests suite', () => {
         }
     })
 
-    test('TC-012 Category counters reflect displayed quantities', async () => {
+    test('TC-012 Category counters reflect displayed quantities', async ({headerFooterPage, categoryPage}) => {
         await goToStore(headerFooterPage, NAV.tabs.store);
         for (const category of categoryList) {
             await categoryPage.selectCategoryByName(category);

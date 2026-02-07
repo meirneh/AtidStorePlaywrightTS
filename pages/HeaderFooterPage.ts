@@ -105,14 +105,14 @@ export default class HeaderFooterPage extends BasePage {
         const key = this.normalize(name);
         if (key && this.tabMap[key]) return this.tabMap[key];
 
-        // Fallback: por accesible name (Avoid breaking if the ID changed)
+        // Fallback: for accesible name (Avoid breaking if the ID changed)
         return this.page.getByRole('link', { name: new RegExp(`^${name.trim()}$`, 'i') });
     }
 
     async navigateToTab(tab: TabKey | string): Promise<void> {
         const locator = typeof tab === 'string' ? this.getTabLocatorByName(tab) : this.tabMap[tab];
-        await this.clickElement(locator);               // usa tu BasePage
-        await this.page.waitForLoadState('networkidle'); // espera simple tras la navegación
+        await this.clickElement(locator);              
+        await this.page.waitForLoadState('networkidle'); 
     }
 
     // Semantic Alias if you prefer this name
@@ -219,12 +219,19 @@ export default class HeaderFooterPage extends BasePage {
 
     async assertNo404NoBlank(): Promise<void> {
         await expect(this.page).not.toHaveURL(/404/i);
+
+        // NEW: Wait for the DOM to be ready and for any meaningful content container to be visible
+        await this.page.waitForLoadState("domcontentloaded");
+        await expect(this.page.locator("main")).toBeVisible({ timeout: 5000 });
+
         const title = await this.page.title();
         expect(title).not.toMatch(/404/i);
+
         const isBlank = await this.page.evaluate(() => {
-            const t = document.body?.innerText?.trim() ?? '';
+            const t = document.body?.innerText?.trim() ?? "";
             return t.length === 0;
         });
+
         expect(isBlank).toBeFalsy();
     }
 
