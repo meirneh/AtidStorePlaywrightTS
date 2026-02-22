@@ -1,4 +1,6 @@
 import { test, expect } from "../utils/fixtures/baseTest";
+import * as allure from 'allure-js-commons';
+import { Severity } from 'allure-js-commons';
 import type HeaderFooterPage from "../pages/HeaderFooterPage";
 import type CategoryPage from "../pages/CategoryPage";
 import type ProductDetailsPage from "../pages/ProductDetailsPage";
@@ -57,10 +59,30 @@ test.describe('Catalog Sidebar Component Reuse and Behavior Across Catalog Pages
         await goHome();
     });
 
-    test("TC-063 Sidebar is present only on catalog pages ", async ({ page, headerFooterPage, categoryPage }) => {
-        await goToStore(headerFooterPage, NAV.tabs.store);;
+    test("TC-063 [Normal] Sidebar is present only on catalog pages ", async ({ page, headerFooterPage, categoryPage }) => {
+        allure.epic("Catalog");
+        allure.feature("Catalog sidebar");
+        allure.story("Sidebar visibility by page type");
+        allure.severity(Severity.NORMAL);
+        await test.step('Navigate to Store', async () => {
+            await goToStore(headerFooterPage, NAV.tabs.store);
+        });
 
-        for (const [tab, url] of cases) {
+        await test.step('Verify sidebar is shown only on catalog pages', async () => {
+            for (const [tab, url] of cases) {
+                await navigateToCaseAndVerifyUrl(page, headerFooterPage, tab, url);
+
+                if (isNonCatalogPage(tab)) {
+                    await categoryPage.verifyCatalogSidebarContentNotPresent();
+                    continue;
+                }
+
+                await verifySidebarVisibleAndContentOk(categoryPage);
+            }
+        })
+
+
+        /* for (const [tab, url] of cases) {
             await navigateToCaseAndVerifyUrl(page, headerFooterPage, tab, url);
 
             if (isNonCatalogPage(tab)) {
@@ -69,19 +91,39 @@ test.describe('Catalog Sidebar Component Reuse and Behavior Across Catalog Pages
             }
 
             await verifySidebarVisibleAndContentOk(categoryPage);
-        }
+        } */
     })
 
-    test('TC-064 Price filter resets when selecting category from sidebar', async ({ headerFooterPage, categoryPage }) => {
-        await goToStore(headerFooterPage, NAV.tabs.store);
-        await applyNarrowedPriceFilterAndVerify(categoryPage);
-        await selectMenFromSidebarAndVerifyReset(categoryPage);
+    test('TC-064 [Normal] Price filter resets when selecting category from sidebar', async ({ headerFooterPage, categoryPage }) => {
+        allure.epic("Catalog");
+        allure.feature("Catalog sidebar");
+        allure.story("Price + category combined behavior");
+        allure.severity(Severity.NORMAL);
+        await test.step('Navigate to Store', async () => {
+            await goToStore(headerFooterPage, NAV.tabs.store);
+        });
+
+        await test.step('Apply narrowed price filter', async () => {
+            await applyNarrowedPriceFilterAndVerify(categoryPage);
+        });
+
+        await test.step('Select Men and verify filters reset', async () => {
+         await selectMenFromSidebarAndVerifyReset(categoryPage);   
+        })    
     });
 
-    test("TC-065 Negative Best Sellers opens correct PDP context", async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await goToStore(headerFooterPage, NAV.tabs.store);
-        await openBestSellerPdpVerifyAndReturnToStore(categoryPage, productDetailsPage, headerFooterPage);
-    });
+    test("TC-065 [Minor] Negative Best Sellers opens correct PDP context", async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic("Catalog");
+        allure.feature("Catalog sidebar");
+        allure.story("Best Sellers PDP context");
+        allure.severity(Severity.MINOR);
+        await test.step('Navigate to Store', async () => {
+            await goToStore(headerFooterPage, NAV.tabs.store);
+        });
 
+        await test.step('OPen Best Seller and verify PDP context', async () => {
+          await openBestSellerPdpVerifyAndReturnToStore(categoryPage, productDetailsPage, headerFooterPage);  
+        })   
+    });
 
 })

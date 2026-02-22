@@ -109,11 +109,38 @@ export default class HeaderFooterPage extends BasePage {
         return this.page.getByRole('link', { name: new RegExp(`^${name.trim()}$`, 'i') });
     }
 
-    async navigateToTab(tab: TabKey | string): Promise<void> {
+  /*   async navigateToTab(tab: TabKey | string): Promise<void> {
         const locator = typeof tab === 'string' ? this.getTabLocatorByName(tab) : this.tabMap[tab];
         await this.clickElement(locator);              
         await this.page.waitForLoadState('networkidle'); 
-    }
+    } */
+    // HeaderFooterPage.ts
+async navigateToTab(tab: TabKey | string): Promise<void> {
+  const locator = typeof tab === 'string' ? this.getTabLocatorByName(tab) : this.tabMap[tab];
+
+  const expectedUrlByTab: Partial<Record<TabKey, RegExp>> = {
+    HOME: /atid\.store\/?$/i,
+    STORE: /\/store\/?/i,
+    MEN: /\/product-category\/men\/?/i,
+    WOMEN: /\/product-category\/women\/?/i,
+    ACCESSORIES: /\/product-category\/accessories\/?/i,
+    ABOUT: /\/about\/?/i,
+    'CONTACT US': /\/contact-us\/?/i,
+  };
+
+  const key = typeof tab === 'string' ? this.normalize(tab) : tab;
+  const expectedUrl = key ? expectedUrlByTab[key] : undefined;
+
+  await locator.click(); // directo
+
+  if (expectedUrl) {
+    await expect(this.page).toHaveURL(expectedUrl, { timeout: 30_000 });
+    await this.page.locator("main").waitFor({ state: "visible", timeout: 15_000 });
+  } else {
+    await this.page.waitForLoadState('domcontentloaded');
+  }
+}
+
 
     // Semantic Alias if you prefer this name
     async goToSelectedTab(tab: TabKey | string): Promise<void> {

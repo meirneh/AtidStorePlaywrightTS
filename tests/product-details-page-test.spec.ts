@@ -1,5 +1,7 @@
 
 import { test, expect } from "../utils/fixtures/baseTest";
+import * as allure from 'allure-js-commons';
+import { Severity } from 'allure-js-commons';
 import type HeaderFooterPage from "../pages/HeaderFooterPage";
 import type CategoryPage from "../pages/CategoryPage";
 
@@ -30,47 +32,144 @@ test.describe('Product Details Page Info and Cart Behavior', () => {
     })
 
 
-    test('018 Product Details (PDP)', async ({ categoryPage, productDetailsPage }) => {
-        await categoryPage.selectProductByName(PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.verifyProductDetailsInfo(PRODUCTS.atidYellowShoes.name, PRODUCTS.atidYellowShoes.price);
-        await productDetailsPage.verifyAddToCartButtonEnableAndVisible();
+    test('TC-018 [Critical] Product Details (PDP)', async ({ categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Product details');
+        allure.story('PDP shows mandatory information');
+        allure.severity(Severity.CRITICAL);
+
+        await test.step('Open PDP from category', async () => {
+            await categoryPage.selectProductByName(PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Verify mandatory PDP information', async () => {
+            await productDetailsPage.verifyProductDetailsInfo(PRODUCTS.atidYellowShoes.name, PRODUCTS.atidYellowShoes.price);
+        });
+
+        await test.step('Verify Add to Cart button is visible and enabled', async () => {
+            await productDetailsPage.verifyAddToCartButtonEnableAndVisible();
+        });
     })
 
-    test('TC-019 Add to cart updates CartBadge and header amount', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await verifyEmptyHeaderCart(headerFooterPage);
-        await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.addToCart();
-        await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.one), PDP.cart.totals.oneItem);
-        await headerFooterPage.verifyTotalItemsInCart(PDP.cart.totals.oneItem);
-        await productDetailsPage.verifyNoticeMessageText(PRODUCTS.atidYellowShoes.name);
-        await headerFooterPage.showItemsInCart();
+    test('TC-019 [Critical] Add to cart updates CartBadge and header amount', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Add to cart');
+        allure.story('Add to cart updates CartBadge and header amount');
+        allure.severity(Severity.CRITICAL);
+        await test.step('Verify header cart is empty', async () => {
+            await verifyEmptyHeaderCart(headerFooterPage);
+        });
+
+        await test.step('Open PDP from Store', async () => {
+            await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Add product to cart', async () => {
+            await productDetailsPage.addToCart();
+        });
+
+        await test.step('Verify header CartBadge and total amount', async () => {
+            await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.one), PDP.cart.totals.oneItem);
+            await headerFooterPage.verifyTotalItemsInCart(PDP.cart.totals.oneItem);
+        });
+
+        await test.step('Verify add-to-cart notice message', async () => {
+            await productDetailsPage.verifyNoticeMessageText(PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Open header cart preview', async () => {
+            await headerFooterPage.showItemsInCart();
+        });
+
     });
 
-    test('TC-020 Re-adding same product increments quantity', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await verifyEmptyHeaderCart(headerFooterPage);
-        await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.incrementQuantity(CART.quantities.one);
-        await productDetailsPage.addToCart();
-        await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.two), PDP.cart.totals.twoItems);
+    test('TC-020 [Critical] Re-adding same product increments quantity', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Add to cart');
+        allure.story('Re-adding same product increments quantity');
+        allure.severity(Severity.CRITICAL);
+
+        await test.step('Verify header is empty', async () => {
+            await verifyEmptyHeaderCart(headerFooterPage);
+        });
+
+        await test.step('Open PDP from Store', async () => {
+            await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Set quantity to 2', async () => {
+            await productDetailsPage.incrementQuantity(CART.quantities.one);
+        });
+
+        await test.step('Add product to cart', async () => {
+            await productDetailsPage.addToCart();
+        });
+
+        await test.step('Verify header CartBadge and total amount', async () => {
+            await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.two), PDP.cart.totals.twoItems);
+        });
     });
 
-    test('TC-021 Quantity control affects add amount', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await verifyEmptyHeaderCart(headerFooterPage);
-        await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.incrementQuantity(CART.quantities.two);
-        await productDetailsPage.addToCart();
-        await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.three), PDP.cart.totals.threeItems);
+    test('TC-021 [Critical] Quantity control affects add amount', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Quantity control');
+        allure.story('Quantity control affects add amount');
+        allure.severity(Severity.CRITICAL);
+
+        await test.step('Verify header cart is empty', async () => {
+            await verifyEmptyHeaderCart(headerFooterPage);
+        });
+
+        await test.step('Open PDP from Store', async () => {
+            await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Set quantity to 3', async () => {
+            await productDetailsPage.incrementQuantity(CART.quantities.two);
+        });
+
+        await test.step('Add product to cart', async () => {
+            await productDetailsPage.addToCart();
+        });
+
+        await test.step('Verify header CartBadge and total amount', async () => {
+            await verifyHeaderCartBadgeAndTotal(headerFooterPage, (CART.quantities.three), PDP.cart.totals.threeItems);
+        });
     });
 
-    test('TC-022 Negative invalid qty blocked ', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.decrementQuantity(CART.quantities.one);
-        await productDetailsPage.verifyQuantityText(String(CART.quantities.one));
-    })
+    test('TC-022 [Normal] Negative invalid qty blocked ', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Quantity control');
+        allure.story('Negative invalid quantity blocked');
+        allure.severity(Severity.NORMAL);
 
-    test('TC-023 Price format consistency ', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
-        await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
-        await productDetailsPage.verifyPriceFormat(PDP.currency.symbol);
-    })
+        await test.step('Open PDP from Store', async () => {
+            await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Attempt to decrement quantity below 1', async () => {
+            await productDetailsPage.decrementQuantity(CART.quantities.one);
+        });
+
+        await test.step('Verify quantity remains 1', async () => {
+            await productDetailsPage.verifyQuantityText(String(CART.quantities.one));
+        });
+    });
+
+    test('TC-023 [Minor] Price format consistency ', async ({ headerFooterPage, categoryPage, productDetailsPage }) => {
+        allure.epic('PDP');
+        allure.feature('Price display');
+        allure.story('Price format consistency');
+        allure.severity(Severity.MINOR);
+
+        await test.step('Open PDP from Store', async () => {
+            await openProduct(headerFooterPage, categoryPage, PRODUCTS.atidYellowShoes.name);
+        });
+
+        await test.step('Verify price format includes currency symbol', async () => {
+            await productDetailsPage.verifyPriceFormat(PDP.currency.symbol);
+        });
+
+    });
 
 })

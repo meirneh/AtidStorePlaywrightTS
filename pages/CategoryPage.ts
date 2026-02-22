@@ -95,7 +95,8 @@ export default class CategoryPage extends BasePage {
 
         //==== Products =====
         this.productPrice = page.locator(".price .woocommerce-Price-amount");
-        this.productContainer = page.locator(".astra-shop-summary-wrap");
+        // this.productContainer = page.locator(".astra-shop-summary-wrap");
+        this.productContainer = page.locator("main ul.products li.product");
         this.productCategoryLabels = page.locator(".ast-woo-product-category");
         this.productName = page.locator(".woocommerce-loop-product__title");
 
@@ -289,15 +290,6 @@ export default class CategoryPage extends BasePage {
         await this.clickElement(this.linkGoHomeButton);
     }
 
-
-    /*  async getCategoryProductCountByIndex(index: number): Promise<number> {
-         const item = this.categoryItems.nth(index);
-         await this.waitForElementVisibility(item);
-         const raw = await this.getElementText(this.categoryCountByIndex(index));
-         const count = parseInt(raw.replace(/[^\d]/g, ""), 10);
-         return count;
-     } */
-
     async getCategoryProductCountByName(name: string): Promise<number> {
         const item = this.categoryItemByName(name)
         await this.waitForElementVisibility(item);
@@ -465,7 +457,6 @@ export default class CategoryPage extends BasePage {
 
         for (let i = 0; i < count; i++) {
             const product = this.productContainer.nth(i);
-            // const priceLocator = this.productPrice.last();
             const priceLocator = product
                 .locator(".price .woocommerce-Price-amount")
                 .last(); // ignora el tachado si hay oferta
@@ -499,9 +490,8 @@ export default class CategoryPage extends BasePage {
     }
 
     async verifyCountProducts(expectedNumber: number): Promise<void> {
-        expect(await this.getCountProducts()).toEqual(expectedNumber);
+        await expect(this.productContainer).toHaveCount(expectedNumber);
     }
-
 
 
     async verifyProductsPricesInRange(min: number, max: number): Promise<void> {

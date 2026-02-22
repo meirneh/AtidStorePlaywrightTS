@@ -1,5 +1,7 @@
 
 import { test, expect } from "../utils/fixtures/baseTest";
+import * as allure from 'allure-js-commons';
+import { Severity } from 'allure-js-commons';
 import type HeaderFooterPage from '../pages/HeaderFooterPage';
 
 import { NAV } from "../utils/test-data/navigation";
@@ -15,7 +17,7 @@ test.describe('Header navigation tabs and cart badge ', () => {
         await headerFooterPage.goToSelectedTab(NAV.tabs.contactUs);
     };
 
-    const navigateTabAndVerifyUrl = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage,tab: string, expectedUrl: RegExp) => {
+    const navigateTabAndVerifyUrl = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage, tab: string, expectedUrl: RegExp) => {
         await headerFooterPage.navigateToTab(tab);
         await expect(page).toHaveURL(expectedUrl);
     };
@@ -29,16 +31,30 @@ test.describe('Header navigation tabs and cart badge ', () => {
     test.beforeEach(async ({ goHome }) => {
         await goHome();
     })
-    
 
-    test('TC-001 Header navigation tabs are routable', async ({page, headerFooterPage}) => {
-        await warmUpNavigationState(headerFooterPage);
-        for (const [tab, expectedUrl] of cases) {
-            await navigateTabAndVerifyUrl(page, headerFooterPage,tab, expectedUrl);
-        }
-    })
 
-    test('TC-002 Cart badge shows 0 on clean session', async ( {page, headerFooterPage}) => {
-        await verifyCartBadgeZeroAndStableAfterReload(page, headerFooterPage);
-    })
+    test('TC-001 [Normal] Header navigation tabs are routable', async ({ page, headerFooterPage }) => {
+        allure.epic('Navigation');
+        allure.feature('Header Navigation');
+        allure.story('Header tabs are routable');
+        allure.severity(Severity.NORMAL);
+        await test.step('Warm up navigation state', async () => {
+            await warmUpNavigationState(headerFooterPage);
+        });
+        await test.step('Navigate each header tab and verify URL', async () => {
+            for (const [tab, expectedUrl] of cases) {
+                await navigateTabAndVerifyUrl(page, headerFooterPage, tab, expectedUrl);
+            };
+        });
+    });
+
+    test('TC-002 [Normal] Cart badge shows 0 on clean session', async ({ page, headerFooterPage }) => {
+        allure.epic("Navigation");
+        allure.feature('Header cart badge');
+        allure.story('Cart badge shows 0 on clean session');
+        allure.severity(Severity.NORMAL);
+        await test.step('Verify CartBadge shows 0 and remains stable after reload', async () => {
+            await verifyCartBadgeZeroAndStableAfterReload(page, headerFooterPage);
+        });
+    });
 })

@@ -1,9 +1,7 @@
 
 import { test, expect } from "../utils/fixtures/baseTest";
-// import { type Page } from "@playwright/test";
 import type HeaderFooterPage from '../pages/HeaderFooterPage';
 import type { LinkKey } from "../pages/HeaderFooterPage";
-import { NAV } from "../utils/test-data/navigation";
 import { SITE } from "../utils/test-data/site";
 import { CART } from "../utils/test-data/cart";
 import { HOME_GLOBAL_NAVIGATION } from "../utils/test-data/home-global-navigation";
@@ -11,7 +9,7 @@ import { HOME_GLOBAL_NAVIGATION } from "../utils/test-data/home-global-navigatio
 const cases = HOME_GLOBAL_NAVIGATION.cases;
 const quickLinks = HOME_GLOBAL_NAVIGATION.quickLinks;
 test.describe('home and global navigations tests', () => {
-
+    test.describe.configure({ timeout: 60_000 });
     const goHomeAndVerify = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage) => {
         await headerFooterPage.backToHomeTab();
         await expect(page).toHaveURL(SITE.baseUrl);
@@ -27,11 +25,19 @@ test.describe('home and global navigations tests', () => {
         await goHomeAndVerify(page, headerFooterPage);
     };
 
-    const verifyCartBadgeZeroAndStableAfterReload = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage) => {
+    const verifyCartBadgeZeroAndStableAfterReload = async (
+        page: import("@playwright/test").Page,
+        headerFooterPage: HeaderFooterPage
+    ) => {
         await headerFooterPage.verifyQuantityItemsInCart(CART.empty.badgeCount);
-        await page.reload();
+
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.locator("main").waitFor({ state: "visible", timeout: 15_000 });
+        await page.locator(".ast-site-header-cart-li .count").waitFor({ state: "visible", timeout: 15_000 });
+
         await headerFooterPage.verifyQuantityItemsInCart(CART.empty.badgeCount);
     };
+
 
     const navigateQuickLinkVerifyAndBack = async (page: import("@playwright/test").Page, headerFooterPage: HeaderFooterPage, label: LinkKey, expectedUrl: RegExp) => {
         await headerFooterPage.navigateToQuickLink(label);
@@ -65,18 +71,10 @@ test.describe('home and global navigations tests', () => {
         }
     }
 
-    // let page: Page;
-    // let headerFooterPage: HeaderFooterPage;
-    /* test.beforeEach(async ({ page: fixturePage, headerFooterPage: fixtureHeaderFooterPage, goHome }) => { 
-        page = fixturePage;
-        headerFooterPage = fixtureHeaderFooterPage; 
-        await goHome(); 
-    }) */
 
     test.beforeEach(async ({ goHome }) => {
         await goHome();
-    })
-
+    });
 
     test('TC-001 Header navigation tabs are visible and routable', async ({ page, headerFooterPage }) => {
         for (const [tab, expectedUrl] of cases) {

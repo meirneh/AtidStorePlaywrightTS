@@ -17,7 +17,7 @@ type Fixtures = {
   checkoutPage: CheckoutPage;
   aboutPage: AboutPage;
   contactUsPage: ContactUsPage;
-  searchResultPage: SearchResultPage; 
+  searchResultPage: SearchResultPage;
   goHome: () => Promise<void>;
 };
 
@@ -38,24 +38,26 @@ export const test = base.extend<Fixtures>({
   cartPage: async ({ page }, use) => {
     await use(new CartPage(page));
   },
-  checkoutPage: async ({ page }, use) => { 
-    await use(new CheckoutPage(page)); 
+  checkoutPage: async ({ page }, use) => {
+    await use(new CheckoutPage(page));
   },
-  aboutPage: async ({ page }, use) => { 
-    await use(new AboutPage(page)); 
+  aboutPage: async ({ page }, use) => {
+    await use(new AboutPage(page));
   },
-  contactUsPage: async ({ page }, use) => { 
-    await use(new ContactUsPage(page)); 
+  contactUsPage: async ({ page }, use) => {
+    await use(new ContactUsPage(page));
   },
-  searchResultPage: async ({ page }, use) => { 
-    await use(new SearchResultPage(page)); 
-  }, 
+  searchResultPage: async ({ page }, use) => {
+    await use(new SearchResultPage(page));
+  },
 
   goHome: async ({ page }, use) => {
     await use(async () => {
-      await page.goto(SITE.baseUrl, { waitUntil: "domcontentloaded" });
+      await page.goto(SITE.baseUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      await page.locator("main").waitFor({ state: "visible", timeout: 15_000 });
+      await page.locator(".ast-site-header-cart-li .count").waitFor({ state: "visible", timeout: 15_000 });
     });
-  },
+  }
 });
 
 export { expect };
